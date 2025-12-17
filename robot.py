@@ -3,20 +3,7 @@ import sys
 import time
 import RPi.GPIO as GPIO
 
-GPIO.setmode(GPIO.BOARD)
 
-TRIG = 16
-ECHO = 18
-i = 0
-
-GPIO.setup(TRIG, GPIO.OUT)
-GPIO.setup(ECHO, GPIO.IN)
-
-GPIO.output(TRIG, False)
-print("Calibrating.....")
-time.sleep(2)
-
-print("Place the object......")
 
 GPIO_PINS = {
     'IN1': 15,
