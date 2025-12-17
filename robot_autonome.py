@@ -4,12 +4,10 @@ import RPi.GPIO as GPIO
 import threading
 import re
 
-# Configuration
 LANGUAGE = 'both'
 MOTOR_SPEED = 80
-OBSTACLE_DISTANCE_THRESHOLD = 20  # cm
+OBSTACLE_DISTANCE_THRESHOLD = 20 
 
-# Pins
 GPIO_PINS = {
     'IN1': 15,
     'IN2': 18,
@@ -30,7 +28,6 @@ class DistanceSensor:
         GPIO.setup(self.trig, GPIO.OUT)
         GPIO.setup(self.echo, GPIO.IN)
         GPIO.output(self.trig, False)
-        # Laisser le capteur se stabiliser
         time.sleep(0.5)
 
     def get_distance(self):
@@ -39,26 +36,22 @@ class DistanceSensor:
         time.sleep(0.00001)
         GPIO.output(self.trig, False)
 
-        timeout = time.time() + 0.04 # 40ms timeout corresponds to ~6m (max range of HC-SR04 is 4m)
+        timeout = time.time() + 0.04
         
-        # Attente debut impulsion (Echo = 0)
         start_wait = time.time()
         while GPIO.input(self.echo) == 0:
-            if time.time() - start_wait > 0.1: # Timeout si pas de reponse
-                return 100 # Retourne une distance "safe" si erreur lecture
+            if time.time() - start_wait > 0.1:
+                return 100
         
         start_time = time.time()
 
-        # Attente fin impulsion (Echo = 1)
         while GPIO.input(self.echo) == 1:
-            if time.time() - start_time > 0.1: # Timeout
+            if time.time() - start_time > 0.1:
                  return 100
         
         end_time = time.time()
 
-        # Calcul distance
         duration = end_time - start_time
-        # Vitesse son = 34300 cm/s
         distance = (duration * 34300) / 2
         return round(distance, 2)
 
@@ -83,7 +76,7 @@ class Robot:
         self.pwm_B.start(0)
 
         self.current_speed = MOTOR_SPEED
-        self.is_moving_forward = False  # Etat pour savoir si on doit verifier les obstacles
+        self.is_moving_forward = False 
 
         print(f"Robot prêt. Vitesse: {MOTOR_SPEED}%")
 
@@ -124,7 +117,7 @@ class Robot:
         GPIO.output(self.IN2, GPIO.HIGH)
         GPIO.output(self.IN3, GPIO.HIGH)
         GPIO.output(self.IN4, GPIO.LOW)
-        self.is_moving_forward = False # On considere qu'on tourne sur place
+        self.is_moving_forward = False
         print("⬅️ GAUCHE")
 
     def move_right(self):
@@ -145,25 +138,15 @@ class Robot:
         self.stop()
         self.pwm_A.stop()
         self.pwm_B.stop()
-        # Note: GPIO.cleanup is called in main/finally block usually, but good practice here too if needed uniquely
-
 
 def extract_duration(text):
-    """
-    Extrait une durée en secondes d'un texte.
-    Ex: "avancer 5 secondes" -> 5
-    """
-    # Recherche nombre suivi de 's', 'sec', 'seconde(s)', 'second(s)'
+   
     match = re.search(r'(\d+)\s*(?:sec|s|seconde|second)', text)
     if match:
         return int(match.group(1))
     return None
 
 def execute_single_action(command, robot):
-    """
-    Exécute une commande simple (sans durée explicite gérée ici).
-    Retourne le TYPE d'action: "MOVE", "TURN", "STOP", "SPEED", "EXIT", "UNKNOWN"
-    """
     command = command.lower()
 
     if any(w in command for w in ["off", "éteindre", "eteindre"]):
@@ -200,7 +183,6 @@ def execute_single_action(command, robot):
         return "SPEED"
     
     else:
-        # Commande non reconnue
         return "UNKNOWN"
 
 
@@ -208,8 +190,6 @@ def process_command(full_command, robot):
     if not full_command: return True
     full_command = full_command.lower()
     
-    # 1. Découpage en segments (puis, ensuite, then, and, et)
-    # On utilise re.split pour couper sur plusieurs séparateurs possibles
     segments = re.split(r'\s+(?:puis|ensuite|apres|then|and|et)\s+', full_command)
     
     print(f"Instruction décomposée : {segments}")
@@ -217,10 +197,8 @@ def process_command(full_command, robot):
     for i, segment in enumerate(segments):
         print(f"👉 Étape {i+1}/{len(segments)} : '{segment.strip()}'")
         
-        # 2. Extraction déla (durée)
         duration = extract_duration(segment)
         
-        # 3. Exécution action
         result = execute_single_action(segment, robot)
         
         if result == "EXIT":
@@ -230,51 +208,41 @@ def process_command(full_command, robot):
             print("❓ Etape ignorée (non comprise).")
             continue
         
-        # 4. Gestion de la durée et de l'enchainement
         is_last_step = (i == len(segments) - 1)
         
-        # Si une durée est demandée explicitement
         if duration:
             print(f"   ⏳ Durée explicite : {duration} secondes...")
             time.sleep(duration)
             robot.stop()
         
-        # Si c'est un virage (TURN) => on force 1s par défaut si pas de durée
+
         elif result == "TURN":
              default_turn_duration = 1.0
              print(f"   🔄 Virage : Durée par défaut de {default_turn_duration}s...")
              time.sleep(default_turn_duration)
              robot.stop()
 
-        # Si c'est un mouvement (MOVE) et ce n'est PAS la dernière étape
         elif not is_last_step and result == "MOVE":
             default_move_duration = 2.0
             print(f"   ⏳ Mouvement intermédiaire : Durée par défaut de {default_move_duration}s...")
             time.sleep(default_move_duration)
             robot.stop()
-            
-        # Si c'est la dernière étape (MOVE ou autre), on laisse continuer (sauf si c'était un TURN qui est géré au dessus)
-    
+                
     return True
 
 
 def monitor_obstacles(robot, sensor, stop_event):
-    """
-    Fonction tournant dans un thread séparé pour surveiller la distance.
-    S'arrête si stop_event est activé.
-    """
+
     print("👀 Surveillance d'obstacles activée...")
     while not stop_event.is_set():
         if robot.is_moving_forward:
             dist = sensor.get_distance()
-            # print(f"Dist: {dist}cm") # Debug
             
             if dist < OBSTACLE_DISTANCE_THRESHOLD:
                 print(f"\n🛑 OBSTACLE DÉTECTÉ ({dist}cm) ! ARRÊT D'URGENCE.")
                 robot.stop()
-                # On peut ajouter ici un petit recul automatique si desiré
                 
-        time.sleep(0.1) # Verification tous les 100ms
+        time.sleep(0.1)
 
 
 def recognize_speech(recognizer, mic):
@@ -298,7 +266,6 @@ def recognize_speech(recognizer, mic):
 def main():
     GPIO.setmode(GPIO.BCM)
     
-    # Initialisation
     sensor = DistanceSensor(TRIG_PIN, ECHO_PIN)
     robot = Robot()
     
@@ -306,12 +273,10 @@ def main():
     recognizer.energy_threshold = 3000
     mic = sr.Microphone()
     
-    # Calibration micro
     with mic as source:
         print("Calibration bruit de fond...")
         recognizer.adjust_for_ambient_noise(source, duration=1)
     
-    # Thread obstacle
     stop_thread = threading.Event()
     obstacle_thread = threading.Thread(target=monitor_obstacles, args=(robot, sensor, stop_thread))
     obstacle_thread.start()
@@ -328,7 +293,6 @@ def main():
                 if not running:
                     break
             
-            # Petite pause pour pas surcharger CPU si boucle rapide
             time.sleep(0.1)
 
     except KeyboardInterrupt:
@@ -336,8 +300,8 @@ def main():
 
     finally:
         print("Nettoyage et fermeture...")
-        stop_thread.set() # Arreter le thread surveillance
-        obstacle_thread.join() # Attendre qu'il finisse
+        stop_thread.set()
+        obstacle_thread.join()
         robot.cleanup()
         GPIO.cleanup()
         print("Terminé.")
