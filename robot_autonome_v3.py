@@ -184,7 +184,7 @@ def execute_single_action(command, robot):
         robot.stop()
         return "EXIT"
 
-    elif any(w in command for w in ["stop", "arrêt", "arrête", "arreter", "halt", "pause"]):
+    elif any(w in command for w in ["stop", "arrêt", "arrête", "arreter", "arrêter", "halt", "pause"]):
         robot.stop()
         return "STOP"
 
@@ -276,49 +276,53 @@ def process_command(full_command, robot):
 def monitor_obstacles(robot, sensor, stop_event):
     print("👀 Surveillance d'obstacles activée...")
     while not stop_event.is_set():
-        if robot.is_moving_forward:
-            dist = sensor.get_distance()
+        try:
+            if robot.is_moving_forward:
+                dist = sensor.get_distance()
 
-            if dist < OBSTACLE_DISTANCE_THRESHOLD:
-                print(f"\n🧱 OBSTACLE ({dist}cm) !")
+                if dist < OBSTACLE_DISTANCE_THRESHOLD:
+                    print(f"\n🧱 OBSTACLE ({dist}cm) !")
 
-                if robot.mode == 'MANUAL':
+                    if robot.mode == 'MANUAL':
 
-                    print("🛑 ARRÊT D'URGENCE.")
-                    robot.stop()
+                        print("🛑 ARRÊT D'URGENCE.")
+                        robot.stop()
 
-                elif robot.mode == 'PATROL':
+                    elif robot.mode == 'PATROL':
 
-                    print("🔄 Évitement en cours...")
+                        print("🔄 Évitement en cours...")
 
-                    robot.stop_motors()
-                    robot.is_moving_forward = False
+                        robot.stop_motors()
+                        robot.is_moving_forward = False
 
-                    robot.move_backward()
+                        robot.move_backward()
 
-                    time.sleep(1.0)
-                    if robot.mode != 'PATROL': break
+                        time.sleep(1.0)
+                        if robot.mode != 'PATROL': break
 
-                    robot.stop_motors()
-                    time.sleep(0.5)
+                        robot.stop_motors()
+                        time.sleep(0.5)
 
-                    turn_time = TURN_90_SEC
+                        turn_time = TURN_90_SEC
 
-                    print("   ↩️ Virage Droit")
-                    robot.move_right()
+                        print("   ↩️ Virage Droit")
+                        robot.move_right()
 
-                    if robot.mode != 'PATROL': break
-                    time.sleep(turn_time)
-                    if robot.mode != 'PATROL': break
+                        if robot.mode != 'PATROL': break
+                        time.sleep(turn_time)
+                        if robot.mode != 'PATROL': break
 
-                    print("   🚀 Reprise Patrouille")
+                        print("   🚀 Reprise Patrouille")
 
-                    if robot.mode == 'PATROL':
-                        robot.move_forward()
-                    else:
-                        print("   ⚠️ Mode changé (STOP reçu ?), on reste à l'arrêt.")
+                        if robot.mode == 'PATROL':
+                            robot.move_forward()
+                        else:
+                            print("   ⚠️ Mode changé (STOP reçu ?), on reste à l'arrêt.")
 
-        time.sleep(0.1)
+            time.sleep(0.1)
+        except Exception as e:
+            print(f"⚠️ Erreur Capteur: {e}")
+            time.sleep(0.1)
 
 def recognize_speech(recognizer, mic):
     with mic as source:

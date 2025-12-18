@@ -8,7 +8,7 @@ PARTIE 1 : COMMANDES COMMUNES (V2 et V3)
 ---------------------
 - "Avance" / "Avancer" / "Go"      : Fait avancer le robot (en continu ou 2s si enchaîné).
 - "Recule" / "Reculer" / "Back"    : Fait reculer le robot.
-- "Stop" / "Arrêt"                 : Arrête tout mouvement immédiatement.
+- "Stop" / "Arrêt" / "Arrêter"     : Arrête tout mouvement immédiatement.
 
 2. VIRAGES PRÉCIS
 -----------------
@@ -47,12 +47,14 @@ PARTIE 2 : COMMANDES EXCLUSIVES
 
 2. ARRÊTER LA PATROUILLE
 ------------------------
-- "Stop"                           : Désactive le mode patrouille et remet le robot en attente d'ordres (Mode Manuel).
+- "Stop" / "Arrêt" / "Arrêter"       : Désactive le mode patrouille et remet le robot en attente d'ordres (Mode Manuel).
 
 ================================================================================
 PART 3: ENGLISH COMMANDS
 ================================================================================
-These commands work in 'robot_autonome_v3.py' alongside French ones.
+These commands work in 'robot_autonome_v3.py'.
+*NOTE*: By default, the robot listens in French (unless configured otherwise). 
+Speak English clearly or change the configuration.
 
 1. BASIC MOVEMENT
 -----------------
@@ -81,4 +83,13 @@ These commands work in 'robot_autonome_v3.py' alongside French ones.
 ------------------
 - "Patrol" / "Autonomous" / "Auto" : Activate obstacle avoidance mode.
 - "Stop"                           : Exit patrol mode.
+
+================================================================================
+PART 4: CONFIGURATION
+================================================================================
+To change the language or speed settings, edit 'robot_autonome_v3.py':
+
+- LANGUAGE = 'fr-FR'  : Robot listens in French only.
+- LANGUAGE = 'en_EN'  : Robot listens in English (US).
+- LANGUAGE = 'both'   : Robot listens in French (default), but understands English keywords.
 
