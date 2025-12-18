@@ -1,11 +1,8 @@
 # GUIDE DES COMMANDES VOCALES - ROBOT AUTONOME
 
-Ce fichier référence l'ensemble des commandes vocales supportées par le Robot v2 et v3.
-
 ================================================================================
 PARTIE 1 : COMMANDES COMMUNES (V2 et V3)
 ================================================================================
-Toutes ces commandes fonctionnent sur les deux versions.
 
 1. MOUVEMENTS DE BASE
 ---------------------
@@ -37,9 +34,8 @@ Toutes ces commandes fonctionnent sur les deux versions.
 - "Vitesse max ensuite recule"     : Change la vitesse d'abord, puis recule.
 
 ================================================================================
-PARTIE 2 : COMMANDES EXCLUSIVES (V3 UNIQUEMENT)
+PARTIE 2 : COMMANDES EXCLUSIVES
 ================================================================================
-Ces commandes ne fonctionnent que sur le script `robot_autonome_v3.py`.
 
 1. MODE AUTOMATIQUE
 -------------------
@@ -52,3 +48,37 @@ Ces commandes ne fonctionnent que sur le script `robot_autonome_v3.py`.
 2. ARRÊTER LA PATROUILLE
 ------------------------
 - "Stop"                           : Désactive le mode patrouille et remet le robot en attente d'ordres (Mode Manuel).
+
+================================================================================
+PART 3: ENGLISH COMMANDS
+================================================================================
+These commands work in 'robot_autonome_v3.py' alongside French ones.
+
+1. BASIC MOVEMENT
+-----------------
+- "Forward" / "Move" / "Go"        : Move forward.
+- "Backward" / "Back" / "Reverse"  : Move backward.
+- "Stop" / "Halt" / "Pause"        : Stop all movement.
+
+2. PRECISION TURNS
+------------------
+- "Turn right"                     : Turn 90° right.
+- "Turn a little right"            : Turn 45° right.
+- "Turn a lot right"               : Turn 135° right.
+- "U-Turn" / "Turn around"         : Turn 180°.
+* Same logic applies for "Left".
+
+3. SPEED CONTROL
+----------------
+- "Speed 50"                       : Set speed to 50% precisely.
+- "Max speed" / "Full speed"       : Set speed to 100%.
+- "Medium speed" / "Average"       : Set speed to 50%.
+- "Low speed" / "Slow"             : Set speed to 40% (minimum).
+- "Faster"                         : Increase speed by 20%.
+- "Slower"                         : Decrease speed by 20%.
+
+4. AUTONOMOUS MODE
+------------------
+- "Patrol" / "Autonomous" / "Auto" : Activate obstacle avoidance mode.
+- "Stop"                           : Exit patrol mode.
+

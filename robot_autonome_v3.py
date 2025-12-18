@@ -12,7 +12,7 @@ OBSTACLE_DISTANCE_THRESHOLD = 20
 TURN_90_SEC = 1.0
 TURN_45_SEC = 0.5 * TURN_90_SEC
 TURN_135_SEC = 1.5 * TURN_90_SEC
-TURN_180_SEC = 2.0 * TURN_90_SEC
+TURN_180_SEC = 1.7 * TURN_90_SEC
 
 GPIO_PINS = {
     'IN1': 15,
@@ -87,7 +87,7 @@ class Robot:
 
         print(f"Robot prêt. Vitesse: {MOTOR_SPEED}%")
 
-    def stop(self):
+    def stop_motors(self):
         GPIO.output(self.IN1, GPIO.LOW)
         GPIO.output(self.IN2, GPIO.LOW)
         GPIO.output(self.IN3, GPIO.LOW)
@@ -97,6 +97,8 @@ class Robot:
         self.is_moving_forward = False
         self.is_moving = False
 
+    def stop(self):
+        self.stop_motors()
         self.mode = 'MANUAL'
         print("🛑 STOP (Mode Manuel)")
 
@@ -167,26 +169,26 @@ def extract_duration(text):
 
 def extract_speed_value(text):
     text = text.lower()
-    if any(w in text for w in ["max", "maximum", "fond"]): return 100
-    if any(w in text for w in ["moyen", "moyenne", "medium"]): return 50
-    if any(w in text for w in ["min", "minimum", "lente"]): return 30
-    match = re.search(r'(?:vitesse|speed)\s*(?:de\s*)?(\d+)', text)
+    if any(w in text for w in ["max", "maximum", "fond", "full"]): return 100
+    if any(w in text for w in ["moyen", "moyenne", "medium", "average"]): return 50
+    if any(w in text for w in ["min", "minimum", "lente", "slow", "low"]): return 40 # Updated to 40 as per min speed fix
+    match = re.search(r'(?:vitesse|speed|velocity)\s*(?:de\s*)?(\d+)', text)
     if match: return int(match.group(1))
     return None
 
 def execute_single_action(command, robot):
     command = command.lower()
 
-    if any(w in command for w in ["off", "éteindre", "eteindre"]):
+    if any(w in command for w in ["off", "éteindre", "eteindre", "shutdown", "exit", "quit"]):
         print("🔴 Programme terminé.")
         robot.stop()
         return "EXIT"
 
-    elif any(w in command for w in ["stop", "arrêt", "arrête", "arreter"]):
+    elif any(w in command for w in ["stop", "arrêt", "arrête", "arreter", "halt", "pause"]):
         robot.stop()
         return "STOP"
 
-    if any(w in command for w in ["patrouille", "patrol", "automatique", "auto"]):
+    if any(w in command for w in ["patrouille", "patrol", "automatique", "auto", "autonomous"]):
         print("\n🤖 ACTIVATION MODE PATROUILLE 🤖")
         robot.mode = 'PATROL'
         robot.move_forward()
@@ -197,26 +199,26 @@ def execute_single_action(command, robot):
         robot.set_speed(speed_val)
         return "SPEED"
 
-    if "demi tour" in command or "demi-tour" in command:
+    if "demi tour" in command or "demi-tour" in command or "u-turn" in command or "turn around" in command:
         robot.move_left()
         return "TURN_180"
 
     if any(w in command for w in ["droite", "right"]):
         robot.move_right()
-        if "peu" in command: return "TURN_RIGHT_45"
-        elif "beaucoup" in command: return "TURN_RIGHT_135"
+        if any(w in command for w in ["peu", "little", "bit", "small"]): return "TURN_RIGHT_45"
+        elif any(w in command for w in ["beaucoup", "lot", "much", "grand"]): return "TURN_RIGHT_135"
         else: return "TURN_RIGHT_90"
 
     if any(w in command for w in ["gauche", "left"]):
         robot.move_left()
-        if "peu" in command: return "TURN_LEFT_45"
-        elif "beaucoup" in command: return "TURN_LEFT_135"
+        if any(w in command for w in ["peu", "little", "bit", "small"]): return "TURN_LEFT_45"
+        elif any(w in command for w in ["beaucoup", "lot", "much", "grand"]): return "TURN_LEFT_135"
         else: return "TURN_LEFT_90"
 
-    elif any(w in command for w in ["avance", "avancer", "avant", "go"]):
+    elif any(w in command for w in ["avance", "avancer", "avant", "go", "forward", "move", "advance"]):
         robot.move_forward()
         return "MOVE"
-    elif any(w in command for w in ["recule", "reculer", "arrière", "back"]):
+    elif any(w in command for w in ["recule", "reculer", "arrière", "back", "backward", "reverse"]):
         robot.move_backward()
         return "MOVE"
     elif any(w in command for w in ["plus vite", "accélère", "faster"]):
@@ -289,7 +291,7 @@ def monitor_obstacles(robot, sensor, stop_event):
 
                     print("🔄 Évitement en cours...")
 
-                    robot.stop()
+                    robot.stop_motors()
                     robot.is_moving_forward = False
 
                     robot.move_backward()
@@ -297,7 +299,7 @@ def monitor_obstacles(robot, sensor, stop_event):
                     time.sleep(1.0)
                     if robot.mode != 'PATROL': break
 
-                    robot.stop()
+                    robot.stop_motors()
                     time.sleep(0.5)
 
                     turn_time = TURN_90_SEC
@@ -325,7 +327,10 @@ def recognize_speech(recognizer, mic):
         try:
             audio = recognizer.listen(source, timeout=2, phrase_time_limit=2)
             print(".", end='', flush=True)
-            return recognizer.recognize_google(audio, language='fr-FR')
+            lang_code = 'fr-FR'
+            if LANGUAGE == 'en_EN':
+                lang_code = 'en-US'
+            return recognizer.recognize_google(audio, language=lang_code)
 
         except sr.UnknownValueError:
             return None
