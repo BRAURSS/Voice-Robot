@@ -81,6 +81,7 @@ class Robot:
 
         self.current_speed = MOTOR_SPEED
         self.is_moving_forward = False
+        self.is_moving = False
 
         self.mode = 'MANUAL'
 
@@ -94,6 +95,7 @@ class Robot:
         self.pwm_A.ChangeDutyCycle(0)
         self.pwm_B.ChangeDutyCycle(0)
         self.is_moving_forward = False
+        self.is_moving = False
 
         self.mode = 'MANUAL'
         print("🛑 STOP (Mode Manuel)")
@@ -105,7 +107,9 @@ class Robot:
         GPIO.output(self.IN2, GPIO.LOW)
         GPIO.output(self.IN3, GPIO.HIGH)
         GPIO.output(self.IN4, GPIO.LOW)
+        GPIO.output(self.IN4, GPIO.LOW)
         self.is_moving_forward = True
+        self.is_moving = True
         print("⬆️ AVANCER")
 
     def move_backward(self):
@@ -115,7 +119,9 @@ class Robot:
         GPIO.output(self.IN2, GPIO.HIGH)
         GPIO.output(self.IN3, GPIO.LOW)
         GPIO.output(self.IN4, GPIO.HIGH)
+        GPIO.output(self.IN4, GPIO.HIGH)
         self.is_moving_forward = False
+        self.is_moving = True
         print("⬇️ RECULER")
 
     def move_left(self):
@@ -125,7 +131,9 @@ class Robot:
         GPIO.output(self.IN2, GPIO.HIGH)
         GPIO.output(self.IN3, GPIO.HIGH)
         GPIO.output(self.IN4, GPIO.LOW)
+        GPIO.output(self.IN4, GPIO.LOW)
         self.is_moving_forward = False
+        self.is_moving = True
         print("⬅️ GAUCHE")
 
     def move_right(self):
@@ -135,12 +143,17 @@ class Robot:
         GPIO.output(self.IN2, GPIO.LOW)
         GPIO.output(self.IN3, GPIO.LOW)
         GPIO.output(self.IN4, GPIO.HIGH)
+        GPIO.output(self.IN4, GPIO.HIGH)
         self.is_moving_forward = False
+        self.is_moving = True
         print("➡️ DROITE")
 
     def set_speed(self, speed):
-        self.current_speed = max(0, min(100, speed))
+        self.current_speed = max(40, min(100, speed))
         print(f"⚡ Vitesse: {self.current_speed}%")
+        if self.is_moving:
+            self.pwm_A.ChangeDutyCycle(self.current_speed)
+            self.pwm_B.ChangeDutyCycle(self.current_speed)
 
     def cleanup(self):
         self.stop()
@@ -281,18 +294,16 @@ def monitor_obstacles(robot, sensor, stop_event):
 
                     robot.move_backward()
 
-                    time.sleep(0.5)
+                    time.sleep(1.0)
                     if robot.mode != 'PATROL': break
 
-                    choice = random.choice(['left', 'right'])
-                    turn_time = random.uniform(0.5, 1.0)
+                    robot.stop()
+                    time.sleep(0.5)
 
-                    if choice == 'left':
-                        print("   ↪️ Virage Gauche")
-                        robot.move_left()
-                    else:
-                        print("   ↩️ Virage Droit")
-                        robot.move_right()
+                    turn_time = TURN_90_SEC
+
+                    print("   ↩️ Virage Droit")
+                    robot.move_right()
 
                     if robot.mode != 'PATROL': break
                     time.sleep(turn_time)
