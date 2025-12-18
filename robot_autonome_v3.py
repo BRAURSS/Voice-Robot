@@ -5,18 +5,15 @@ import threading
 import re
 import random
 
-# Configuration
 LANGUAGE = 'both'
 MOTOR_SPEED = 80
-OBSTACLE_DISTANCE_THRESHOLD = 20  # cm
+OBSTACLE_DISTANCE_THRESHOLD = 20
 
-# Durées de rotation (estimations pour 80% de vitesse)
 TURN_90_SEC = 1.0
 TURN_45_SEC = 0.5 * TURN_90_SEC
 TURN_135_SEC = 1.5 * TURN_90_SEC
 TURN_180_SEC = 2.0 * TURN_90_SEC
 
-# Pins
 GPIO_PINS = {
     'IN1': 15,
     'IN2': 18,
@@ -29,7 +26,6 @@ GPIO_PINS = {
 TRIG_PIN = 23
 ECHO_PIN = 24
 
-
 class DistanceSensor:
     def __init__(self, trig, echo):
         self.trig = trig
@@ -40,30 +36,29 @@ class DistanceSensor:
         time.sleep(0.5)
 
     def get_distance(self):
-        # Envoi impulsion
+
         GPIO.output(self.trig, True)
         time.sleep(0.00001)
         GPIO.output(self.trig, False)
 
         timeout = time.time() + 0.04
-        
+
         start_wait = time.time()
         while GPIO.input(self.echo) == 0:
             if time.time() - start_wait > 0.1:
                 return 100
-        
+
         start_time = time.time()
 
         while GPIO.input(self.echo) == 1:
             if time.time() - start_time > 0.1:
                  return 100
-        
+
         end_time = time.time()
 
         duration = end_time - start_time
         distance = (duration * 34300) / 2
         return round(distance, 2)
-
 
 class Robot:
     def __init__(self):
@@ -85,9 +80,8 @@ class Robot:
         self.pwm_B.start(0)
 
         self.current_speed = MOTOR_SPEED
-        self.is_moving_forward = False 
-        
-        # Mode: 'MANUAL' ou 'PATROL'
+        self.is_moving_forward = False
+
         self.mode = 'MANUAL'
 
         print(f"Robot prêt. Vitesse: {MOTOR_SPEED}%")
@@ -100,8 +94,7 @@ class Robot:
         self.pwm_A.ChangeDutyCycle(0)
         self.pwm_B.ChangeDutyCycle(0)
         self.is_moving_forward = False
-        
-        # Si on appelle stop(), on quitte le mode patrouille par sécurité
+
         self.mode = 'MANUAL'
         print("🛑 STOP (Mode Manuel)")
 
@@ -154,7 +147,6 @@ class Robot:
         self.pwm_A.stop()
         self.pwm_B.stop()
 
-
 def extract_duration(text):
     match = re.search(r'(\d+)\s*(?:sec|s|seconde|second)', text)
     if match: return int(match.group(1))
@@ -180,24 +172,20 @@ def execute_single_action(command, robot):
     elif any(w in command for w in ["stop", "arrêt", "arrête", "arreter"]):
         robot.stop()
         return "STOP"
-    
-    # --- Mode Patrouille ---
+
     if any(w in command for w in ["patrouille", "patrol", "automatique", "auto"]):
         print("\n🤖 ACTIVATION MODE PATROUILLE 🤖")
         robot.mode = 'PATROL'
-        robot.move_forward() # On lance l'avancée
+        robot.move_forward()
         return "PATROL"
 
-
-    # --- Gestion Vitesse ---
     speed_val = extract_speed_value(command)
     if speed_val is not None:
         robot.set_speed(speed_val)
         return "SPEED"
 
-    # --- Virages Spécifiques ---
     if "demi tour" in command or "demi-tour" in command:
-        robot.move_left() 
+        robot.move_left()
         return "TURN_180"
 
     if any(w in command for w in ["droite", "right"]):
@@ -212,7 +200,6 @@ def execute_single_action(command, robot):
         elif "beaucoup" in command: return "TURN_LEFT_135"
         else: return "TURN_LEFT_90"
 
-    # --- Mouvements ---
     elif any(w in command for w in ["avance", "avancer", "avant", "go"]):
         robot.move_forward()
         return "MOVE"
@@ -228,40 +215,37 @@ def execute_single_action(command, robot):
     else:
         return "UNKNOWN"
 
-
 def process_command(full_command, robot):
     if not full_command: return True
     full_command = full_command.lower()
-    
+
     segments = re.split(r'\s+(?:puis|ensuite|apres|then|and|et)\s+', full_command)
-    
+
     print(f"Instruction : {segments}")
 
     for i, segment in enumerate(segments):
         duration = extract_duration(segment)
         result = execute_single_action(segment, robot)
-        
+
         if result == "EXIT": return False
         if result == "UNKNOWN": continue
 
-        # Pas de timer en mode patrouille, sauf si stop explicitement
         if result == "PATROL":
-            # On sort de la boucle de commande pour laisser le robot vivre sa vie
-            # Il ne s'arrêtera que si on dit "stop" au prochain tour de micro
-            break 
-        
+
+            break
+
         is_last_step = (i == len(segments) - 1)
-        
+
         if duration:
             print(f"   ⏳ Durée : {duration}s")
             time.sleep(duration)
             robot.stop()
-        
+
         elif result == "TURN_180":
             time.sleep(TURN_180_SEC)
             robot.stop()
         elif "TURN" in result:
-             # Gestion simplifié des virages 45/90/135
+
              sec = TURN_90_SEC
              if "45" in result: sec = TURN_45_SEC
              if "135" in result: sec = TURN_135_SEC
@@ -271,95 +255,94 @@ def process_command(full_command, robot):
         elif result == "MOVE" and not is_last_step:
             time.sleep(2.0)
             robot.stop()
-            
+
     return True
 
-
 def monitor_obstacles(robot, sensor, stop_event):
-    """
-    Surveille la distance. Assure la sécurité ou la patrouille.
-    """
     print("👀 Surveillance d'obstacles activée...")
     while not stop_event.is_set():
         if robot.is_moving_forward:
             dist = sensor.get_distance()
-            
+
             if dist < OBSTACLE_DISTANCE_THRESHOLD:
                 print(f"\n🧱 OBSTACLE ({dist}cm) !")
 
                 if robot.mode == 'MANUAL':
-                    # Arrêt d'urgence classique
+
                     print("🛑 ARRÊT D'URGENCE.")
                     robot.stop()
-                
+
                 elif robot.mode == 'PATROL':
-                    # Manoeuvre d'évitement
+
                     print("🔄 Évitement en cours...")
-                    
-                    # 1. Arrêt
-                    robot.stop() # (Switch en manual brièvement, mais on force les mvmts)
-                    robot.is_moving_forward = False 
-                    
-                    # 2. Reculer
+
+                    robot.stop()
+                    robot.is_moving_forward = False
+
                     robot.move_backward()
+
                     time.sleep(0.5)
-                    
-                    # 3. Tourner (Aléatoire)
+                    if robot.mode != 'PATROL': break
+
                     choice = random.choice(['left', 'right'])
-                    turn_time = random.uniform(0.5, 1.0) # Entre 45 et 90 degrés environ
-                    
+                    turn_time = random.uniform(0.5, 1.0)
+
                     if choice == 'left':
                         print("   ↪️ Virage Gauche")
                         robot.move_left()
                     else:
                         print("   ↩️ Virage Droit")
                         robot.move_right()
-                        
+
+                    if robot.mode != 'PATROL': break
                     time.sleep(turn_time)
-                    
-                    # 4. Repartir
+                    if robot.mode != 'PATROL': break
+
                     print("   🚀 Reprise Patrouille")
-                    # On évite d'appeler robot.stop() ici car ça reset le mode à MANUAL
-                    # On relance direct forward
-                    robot.mode = 'PATROL' # S'assurer qu'on reste en patrol
-                    robot.move_forward()
+
+                    if robot.mode == 'PATROL':
+                        robot.move_forward()
+                    else:
+                        print("   ⚠️ Mode changé (STOP reçu ?), on reste à l'arrêt.")
 
         time.sleep(0.1)
 
-
 def recognize_speech(recognizer, mic):
     with mic as source:
-        # Petit ajustement: si le robot bouge, il fait du bruit.
-        # On peut réduire la sensibilité ou juste espérer que le micro capte "STOP"
-        print("🎤", end='', flush=True) 
+
+        print("🎤", end='', flush=True)
         try:
             audio = recognizer.listen(source, timeout=2, phrase_time_limit=2)
             print(".", end='', flush=True)
             return recognizer.recognize_google(audio, language='fr-FR')
-        except:
-            return None
 
+        except sr.UnknownValueError:
+            return None
+        except sr.RequestError:
+            return None
+        except sr.WaitTimeoutError:
+            return None
 
 def main():
     GPIO.setmode(GPIO.BCM)
     sensor = DistanceSensor(TRIG_PIN, ECHO_PIN)
     robot = Robot()
-    
+
     recognizer = sr.Recognizer()
-    recognizer.energy_threshold = 3000 # Peut-être augmenter si moteurs bruyants
+    recognizer.energy_threshold = 3000
     mic = sr.Microphone()
-    
+
     with mic as source:
         print("Calibration...")
         recognizer.adjust_for_ambient_noise(source, duration=1)
-    
+
     stop_thread = threading.Event()
     obstacle_thread = threading.Thread(target=monitor_obstacles, args=(robot, sensor, stop_thread))
     obstacle_thread.start()
 
     print("\n--- ROBOT v3 (PATROL EDITION) ---")
     print("Dites 'PATROUILLE' pour lancer le mode autonome. 'STOP' pour arrêter.")
-    
+
     try:
         while True:
             command = recognize_speech(recognizer, mic)
@@ -368,7 +351,7 @@ def main():
                 running = process_command(command, robot)
                 if not running:
                     break
-            
+
             time.sleep(0.05)
 
     except KeyboardInterrupt:

@@ -3,8 +3,6 @@ import sys
 import time
 import RPi.GPIO as GPIO
 
-
-
 GPIO_PINS = {
     'IN1': 15,
     'IN2': 18,
@@ -16,7 +14,6 @@ GPIO_PINS = {
 
 MOTOR_SPEED = 60
 LANGUAGE = 'both'
-
 
 class Robot:
     def __init__(self):
@@ -41,7 +38,7 @@ class Robot:
 
         self.current_speed = MOTOR_SPEED
 
-        print(f"GPIO initialisé. Vitesse par défaut: {MOTOR_SPEED}%" if LANGUAGE == 'fr-FR' 
+        print(f"GPIO initialisé. Vitesse par défaut: {MOTOR_SPEED}%" if LANGUAGE == 'fr-FR'
               else f"GPIO initialized. Default motor speed: {MOTOR_SPEED}%")
 
     def stop(self):
@@ -95,7 +92,7 @@ class Robot:
 
     def set_speed(self, speed):
         self.current_speed = max(0, min(100, speed))
-        print(f"⚡ Vitesse réglée à: {self.current_speed}%" if LANGUAGE == 'fr-FR' 
+        print(f"⚡ Vitesse réglée à: {self.current_speed}%" if LANGUAGE == 'fr-FR'
               else f"⚡ Speed set to: {self.current_speed}%")
 
     def cleanup(self):
@@ -103,7 +100,6 @@ class Robot:
         self.pwm_A.stop()
         self.pwm_B.stop()
         GPIO.cleanup()
-
 
 def process_command(command, robot):
     command = command.lower()
@@ -146,7 +142,6 @@ def process_command(command, robot):
 
     return True
 
-
 def recognize_speech(recognizer, audio):
     if LANGUAGE == 'both':
         try:
@@ -170,7 +165,6 @@ def recognize_speech(recognizer, audio):
         command = recognizer.recognize_google(audio, language='en-US')
         print(f"💬 You said: '{command}'")
         return command
-
 
 def main():
     recognizer = sr.Recognizer()
@@ -215,20 +209,20 @@ def main():
             with mic as source:
                 msg = "🎤 En écoute..." if LANGUAGE == 'fr-FR' else "🎤 Listening..."
                 print(msg, end=' ', flush=True)
-                
+
                 try:
                     audio = recognizer.listen(source, timeout=2, phrase_time_limit=2)
                     print("✓")
-                    
+
                 except sr.WaitTimeoutError:
                     print("⏱️")
                     continue
 
             try:
                 command = recognize_speech(recognizer, audio)
-                
+
                 should_continue = process_command(command, robot)
-                
+
                 if not should_continue:
                     break
 
@@ -256,7 +250,6 @@ def main():
             robot.cleanup()
         msg = "✓ Programme terminé." if LANGUAGE == 'fr-FR' else "✓ Program exited cleanly."
         print(msg)
-
 
 if __name__ == "__main__":
     main()
