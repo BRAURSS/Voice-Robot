@@ -3,9 +3,9 @@ import time
 import RPi.GPIO as GPIO
 import threading
 import re
-import random
 
-LANGUAGE = 'both'
+
+LANGUAGE = 'en_EN'
 MOTOR_SPEED = 80
 OBSTACLE_DISTANCE_THRESHOLD = 20
 
@@ -215,10 +215,10 @@ def execute_single_action(command, robot):
         elif any(w in command for w in ["beaucoup", "lot", "much", "grand"]): return "TURN_LEFT_135"
         else: return "TURN_LEFT_90"
 
-    elif any(w in command for w in ["avance", "avancer", "avant", "go", "forward", "move", "advance"]):
+    elif any(w in command for w in ["avance", "avancer", "avant", "go", "forward", "move", "advance", "front"]):
         robot.move_forward()
         return "MOVE"
-    elif any(w in command for w in ["recule", "reculer", "arrière", "back", "backward", "reverse"]):
+    elif any(w in command for w in ["recule", "reculer", "arrière", "back", "backward", "reverse", "bag", "bagwards"]):
         robot.move_backward()
         return "MOVE"
     elif any(w in command for w in ["plus vite", "accélère", "faster"]):
